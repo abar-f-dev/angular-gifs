@@ -1,3 +1,4 @@
+import { Gif, SearchResponse } from './../interfaces/gifs.interfaces';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 
@@ -6,11 +7,15 @@ import { Injectable } from '@angular/core';
 })
 export class GifsService {
 
+  public gifList: Gif[] = [];
+
   private _tagsHistory: string[] = [];
   private apiKey:string = 'i4yTBe5C1ImEnDyPEPuw0rPacWyYXKqr'
   private serviceUrl = 'https://api.giphy.com/v1/gifs'
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {
+    this.loadLocalStorage()
+  }
 
   get tagsHistory(){
     return [...this._tagsHistory]
@@ -23,6 +28,24 @@ export class GifsService {
     }
     this._tagsHistory.unshift(tag);
     this._tagsHistory = this.tagsHistory.splice(0,10)
+    this.saveLocalStorage();
+  }
+
+  private saveLocalStorage():void{
+    localStorage.setItem('history', JSON.stringify(this.tagsHistory))
+  }
+
+  private loadLocalStorage() {
+    if (typeof window !== 'undefined') {
+      localStorage.getItem('history')
+    } else{
+      return
+    }
+
+    this._tagsHistory = JSON.parse( localStorage.getItem('history')! );
+
+    if ( this._tagsHistory.length === 0 ) return;
+    this.searchTag( this._tagsHistory[0] );
   }
 
   searchTag(tag:string):void{
@@ -33,10 +56,10 @@ export class GifsService {
       .set('limit', 10)
       .set('q', tag)
 
-    this.http.get(`${this.serviceUrl}/search`, {params})
-      .subscribe(resp =>
-          console.log(resp)
-        )
+    this.http.get<SearchResponse>(`${this.serviceUrl}/search`, {params})
+      .subscribe((resp) => {
+        this.gifList = resp.data;
+      });
 
     // fetch('https://api.giphy.com/v1/gifs/search?api_key=i4yTBe5C1ImEnDyPEPuw0rPacWyYXKqr&q=valorant&limit=10')
     //   .then(resp => resp.json())
